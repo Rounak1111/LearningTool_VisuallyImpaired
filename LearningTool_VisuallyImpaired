@@ -1,0 +1,90 @@
+import os
+from tkinter import Tk, filedialog, Button, Label, Text
+import pyttsx3  # For Text-to-Speech
+import textwrap
+from playsound import playsound
+from PIL import Image
+import pytesseract
+
+# Paths for output files
+OUTPUT_DIR = "./assets"
+AUDIO_FILE_PATH = os.path.join(OUTPUT_DIR, "output_audio.mp3")
+BRAILLE_FILE_PATH = os.path.join(OUTPUT_DIR, "output_braille.txt")
+# Braille mapping
+braille_mapping = {
+    "a": "⠁", "b": "⠃", "c": "⠉", "d": "⠙", "e": "⠑",
+    "f": "⠋", "g": "⠛", "h": "⠓", "i": "⠊", "j": "⠚",
+    "k": "⠅", "l": "⠇", "m": "⠍", "n": "⠝", "o": "⠕",
+    "p": "⠏", "q": "⠟", "r": "⠗", "s": "⠎", "t": "⠞",
+    "u": "⠥", "v": "⠧", "w": "⠺", "x": "⠭", "y": "⠽",
+    "z": "⠵", " ": " ", ".": "⠲", ",": "⠂", "!": "⠖",
+    "?": "⠦", "-": "⠤", "'": "⠄", "\"": "⠶", ":": "⠒",
+}
+# Function: Text-to-Speech (TTS)
+def text_to_speech(text):
+    try:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        engine = pyttsx3.init()
+        # Set the voice to female
+        voices = engine.getProperty("voices")
+        for voice in voices:
+            if "female" in voice.name.lower():  
+                engine.setProperty("voice", voice.id)
+                break
+        
+        engine.setProperty("rate", 150) 
+        # Save audio file
+        engine.save_to_file(text, AUDIO_FILE_PATH)
+        engine.runAndWait()
+        status_label.config(text=f"Audio file saved at: {os.path.abspath(AUDIO_FILE_PATH)}")
+    except Exception as e:
+        status_label.config(text=f"Error in Text-to-Speech: {e}")
+# Function: Convert text to Braille
+def text_to_braille(text):
+    try:
+        os.makedirs(OUTPUT_DIR, exist_ok=True)
+        braille_text = "".join(braille_mapping.get(char, "⠿") for char in text.lower())
+        with open(BRAILLE_FILE_PATH, "w", encoding="utf-8") as file:
+            file.write(textwrap.fill(braille_text, width=50))
+        status_label.config(text=f"Braille file saved at: {os.path.abspath(BRAILLE_FILE_PATH)}")
+    except Exception as e:
+        status_label.config(text=f"Error in Braille Conversion: {e}")
+# Function: Open a text file
+def open_file():
+    file_path = filedialog.askopenfilename(filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
+    if file_path:
+        try:
+            with open(file_path, "r", encoding="utf-8") as file:
+                content = file.read()
+            text_area.delete("1.0", "end")
+            text_area.insert("1.0", content)
+            status_label.config(text="File loaded successfully.")
+        except Exception as e:
+            status_label.config(text=f"Error loading file: {e}")
+# Function: Save text to a file
+def save_text():
+    file_path = filedialog.asksaveasfilename(defaultextension=".txt",
+                                             filetypes=[("Text Files", "*.txt"), ("All Files", "*.*")])
+    if file_path:
+        try:
+            with open(file_path, "w", encoding="utf-8") as file:
+                file.write(text_area.get("1.0", "end").strip())
+            status_label.config(text=f"Text saved at: {file_path}")
+        except Exception as e:
+            status_label.config(text=f"Error saving text: {e}")
+# GUI Setup
+root = Tk()
+root.title("Inclusive Learning Tool")
+root.geometry("800x600")
+# Labels
+Label(root, text="Inclusive Learning Tool for <!>Visually Impaired People<!>", font=("Arial", 14)).pack(pady=10)
+status_label = Label(root, text="", font=("Arial", 10), fg="green")
+status_label.pack(pady=5)
+# Buttons
+Button(root, text="Open File", command=open_file, width=15).pack(pady=5)
+Button(root, text="Convert to Audio", command=lambda: text_to_speech(text_area.get("1.0", "end").strip()), width=15).pack(pady=5)
+Button(root, text="Convert to Braille", command=lambda: text_to_braille(text_area.get("1.0", "end").strip()), width=15).pack(pady=5)
+Button(root, text="Save Text", command=save_text, width=15).pack(pady=5)
+text_area = Text(root, wrap="word", width=80, height=15)
+text_area.pack(pady=10)
+root.mainloop()
